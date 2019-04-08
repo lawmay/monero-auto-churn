@@ -1,5 +1,6 @@
 import json
 import requests
+import sys
 
 
 headers = {'content-type': 'application/json'}
@@ -24,8 +25,12 @@ class RPC:
     def request(self, url, path, data):
         current_url = url + "/" + path
 
-        return requests.post(current_url, data=json.dumps(data),
+        try:
+            return requests.post(current_url, data=json.dumps(data),
                                  headers=headers).json()
+        except requests.exceptions.RequestException as error:
+            print(error)
+            sys.exit(1)
 
     def json_rpc_request(self, url, data):
         global json_rpc_id
