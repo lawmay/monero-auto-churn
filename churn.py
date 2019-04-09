@@ -126,25 +126,26 @@ def churn(accounts, destination_account, rpc, dry_run=True):
     for i, account in enumerate(accounts):
         balance = account["unlocked_balance"]
 
-        if destination_account != i and balance > 0:
-            print("Transfering from account {} ({}) to account {}"
-                  .format(i, round(utils.convert_to_monero(balance), 2), destination_account))
+        if destination_account != i:
+            if balance > 0:
+                print("Transfering from account {} ({}) to account {}"
+                      .format(i, round(utils.convert_to_monero(balance), 2), destination_account))
 
-            response = None
+                response = None
 
-            if not dry_run:
-                  response = rpc.sweep_all(i, account["unlocked_balance"],
-                                           current_account)
+                if not dry_run:
+                      response = rpc.sweep_all(i, account["unlocked_balance"],
+                                               current_account)
 
-                  # We need a transaction hash to get churn times
-                  if tx_hash is None:
-                      tx_hash = response["result"]["tx_hash_list"][0]
+                      # We need a transaction hash to get churn times
+                      if tx_hash is None:
+                          tx_hash = response["result"]["tx_hash_list"][0]
 
-            print("Transaction details:", json.dumps(response, indent=4), "\n")
+                print("Transaction details:", json.dumps(response, indent=4), "\n")
 
-            time.sleep(1)
-        elif balance == 0:
-            print("No money in account {} to transfer to account {}\n".format(i, destination_account))
+                time.sleep(1)
+            else:
+                print("No money in account {} to transfer to account {}\n".format(i, destination_account))
 
     return tx_hash
 
