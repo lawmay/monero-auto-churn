@@ -238,7 +238,7 @@ def main():
     # Transfer all back to main account
     print("\nStarting last churn ({})".format(CHURNS))
 
-    churn(accounts, n, churn, dry_run=IS_DRY_RUN)
+    churn(accounts, 0, rpc, dry_run=IS_DRY_RUN)
 
 
     """
