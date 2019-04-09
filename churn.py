@@ -253,11 +253,11 @@ def main():
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--dry-run", action="store_true",
+    parser.add_argument("--dry-run", "-d", action="store_true",
                         help="run a dry run that doesn't move funds")
-    parser.add_argument("--quick-dry-run", action="store_true",
+    parser.add_argument("--quick-dry-run", "-q", action="store_true",
                         help="do a quick version of a dry run")
-    parser.add_argument("--churns", action="store", default=None,
+    parser.add_argument("--churns", "-c", action="store", default=None,
                         help="set number of churns (between 2-10)")
 
     args = parser.parse_args()
