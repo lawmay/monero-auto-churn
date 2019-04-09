@@ -38,7 +38,8 @@ def print_accounts(accounts):
         print("{}:".format(i), account["base_address"])
         print("\tunlocked_balance:",
               round(utils.convert_to_monero(account["unlocked_balance"]), 2))
-        print("\tbalance:", round(utils.convert_to_monero(account["balance"]), 2), "\n")
+        print("\tbalance:",
+              round(utils.convert_to_monero(account["balance"]), 2), "\n")
 
 def print_wait_times(churns, wait_times):
     print("\nWAIT TIMES")
@@ -58,8 +59,9 @@ def print_wait_times(churns, wait_times):
             break
 
     print("-------------------------------------")
-    print("Total time: {} ({} hr)\n".format(total_seconds,
-                                       round(utils.seconds_to_hours(total_seconds), 1)))
+    print("Total: {} seconds ({} hr)\n"
+          .format(total_seconds,
+                  round(utils.seconds_to_hours(total_seconds), 1)))
 
 def get_wait_times_from_transaction(tx_hash, rpc):
     transactions = rpc.get_transactions(tx_hash)
