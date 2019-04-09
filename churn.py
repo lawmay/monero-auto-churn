@@ -4,6 +4,7 @@
 
 import argparse
 import json
+from progress.bar import Bar
 import random
 from rpc import RPC
 import sys
@@ -105,17 +106,14 @@ def sleep(seconds):
           .format(seconds,
                   round(utils.seconds_to_hours(seconds), 1)))
 
-    while(seconds > 0):
-        print("Sleeping for {} more seconds ({} hr)..."
-              .format(seconds,
-                      round(utils.seconds_to_hours(seconds), 1)),
-                            end="\r")
+    bar = Bar(max=seconds)
 
+    while(seconds > 0):
+        bar.next()
         time.sleep(1)
         seconds -= 1
 
     print("\nDone sleeping this churn")
-
 
 def churn(accounts, destination_account, rpc, dry_run=True):
     print("------------------------------------------------------")
