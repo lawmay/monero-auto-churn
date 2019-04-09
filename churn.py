@@ -19,8 +19,8 @@ IS_QUICK = False
 # Random churn times
 LOWER = 1234
 UPPER = 2345
-QUICK_LOWER = 4
-QUICK_UPPER = 8
+QUICK_LOWER = 3
+QUICK_UPPER = 6
 
 
 def get_random_churns():
