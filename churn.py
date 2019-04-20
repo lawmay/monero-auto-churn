@@ -21,7 +21,16 @@ IS_QUICK = False
 LOWER = 1234
 UPPER = 2345
 QUICK_LOWER = 3
-QUICK_UPPER = 6
+QUICK_UPPER = 5
+
+# Churn upper and lower limits
+CHURN_LOWER = 3
+CHURN_UPPER = 10
+
+# Balances are locked for 10 blocks
+# and a new block is mined roughly every 2min
+# 10 block * 2 minutes * 60 seconds = 1200
+MINIMUM_WAIT = 1200
 
 
 def get_random_churns():
@@ -43,7 +52,7 @@ def print_accounts(accounts):
               round(utils.convert_to_monero(account["balance"]), 2), "\n")
 
 def print_wait_times(churns, wait_times):
-    print("\nWAIT TIMES")
+    print("\n\nWAIT TIMES")
     print("-------------------------------------")
     print("For {} churns, we wait {} times".format(churns, churns - 1))
 
@@ -59,8 +68,7 @@ def print_wait_times(churns, wait_times):
         if i == (churns - 2):
             break
 
-    print("-------------------------------------")
-    print("Total: {} seconds ({} hr)\n"
+    print("Total: {} seconds ({} hr)"
           .format(total_seconds,
                   round(utils.seconds_to_hours(total_seconds), 1)))
 
@@ -99,10 +107,15 @@ def get_wait_times_from_transaction(tx_hash, rpc):
     # Calculate block timestamp differences (and use those as churn timings)
     wait_times = [block_timestamps[i] - block_timestamps[i + 1] for i in range(len(block_timestamps) - 1)]
 
+    # Add minimum waiting time for cases where block differences are lower
+    # than the time it takes to unlock a balance
+    # wait_times = [int((wait_time + MINIMUM_WAIT) / 10) for wait_time in wait_times]
+    wait_times = [int(wait_time + MINIMUM_WAIT) for wait_time in wait_times]
+
     return wait_times
 
 def sleep(seconds):
-    print("\nStarting a sleep phase for {} seconds ({} hr)"
+    print("\n\nSleeping for {} seconds ({} hr)"
           .format(seconds,
                   round(utils.seconds_to_hours(seconds), 1)))
 
@@ -112,8 +125,6 @@ def sleep(seconds):
         bar.next()
         time.sleep(1)
         seconds -= 1
-
-    print("\nDone sleeping this churn")
 
 def churn(accounts, destination_account, rpc, dry_run=True):
     print("------------------------------------------------------")
@@ -126,7 +137,7 @@ def churn(accounts, destination_account, rpc, dry_run=True):
 
         if destination_account != i:
             if balance > 0:
-                print("Transfering from account {} ({}) to account {}"
+                print("Transferring from account {} ({}) to account {}"
                       .format(i, round(utils.convert_to_monero(balance), 2), destination_account))
 
                 response = None
@@ -139,15 +150,16 @@ def churn(accounts, destination_account, rpc, dry_run=True):
                       if tx_hash is None:
                           tx_hash = response["result"]["tx_hash_list"][0]
 
-                print("Transaction details:", json.dumps(response, indent=4), "\n")
+                if response is not None and "result" in response and "tx_hash_list" in response["result"]:
+                    print("Transaction hash:", response["result"]["tx_hash_list"][0])
 
-                time.sleep(1)
+                time.sleep(0.5)
             else:
-                print("No money in account {} to transfer to account {}\n".format(i, destination_account))
+                print("Nothing in account {} to transfer to account {}".format(i, destination_account))
 
     return tx_hash
 
-def create_accounts(churns, total_accounts):
+def create_accounts(churns, total_accounts, rpc):
     churn_account_difference = churns - total_accounts
 
     if churn_account_difference > 0:
@@ -168,12 +180,21 @@ def main():
     """
     Check if the number of churns passed in within our allowed range
     """
-    if CHURNS < 2:
-        print("Can't churn less than 2 times. Exiting...".format(CHURNS))
-        sys.exit()
-    elif CHURNS > 11:
-        print("Can't churn more than 11 times. Exiting...".format(CHURNS))
-        sys.exit()
+    if CHURNS < CHURN_LOWER:
+        print("Can't churn less than {} times. Exiting...".format(CHURN_LOWER))
+        sys.exit(1)
+    elif CHURNS > CHURN_UPPER:
+        print("Can't churn more than {} times. Exiting...".format(CHURN_UPPER))
+        sys.exit(1)
+
+    """
+    Indicate whether it's a dry run
+    """
+    if IS_DRY_RUN:
+        print()
+        print("*********************************************")
+        print("DRY RUN IN PROGRESS: FUNDS WILL NOT BE MOVED!")
+        print("*********************************************")
 
     """
     Check if we need to create new accounts within the walllet
@@ -183,10 +204,9 @@ def main():
     accounts = response["result"]["subaddress_accounts"]
     total_accounts = len(accounts)
 
-    print("Churns:", CHURNS)
-    print("Total accounts:", total_accounts, "\n")
+    print("\nChurns: {}\tTotal accounts: {}\n".format(CHURNS, total_accounts))
 
-    if create_accounts(CHURNS, total_accounts):
+    if create_accounts(CHURNS, total_accounts, rpc):
         # Re-fetch accounts
         response = rpc.get_accounts()
         accounts = response["result"]["subaddress_accounts"]
@@ -197,7 +217,7 @@ def main():
     Grab a transaction hash, then get churn timings.
     The transaction hash is needed to get the churn times.
     """
-    print("Starting churn 1")
+    print("\nChurn 1")
 
     # Send all funds to first account
     # and grab tx_hash to get churn timings
@@ -206,7 +226,7 @@ def main():
     wait_times = []
 
     if tx_hash is not None:
-        print("Using transaction hash {} to get wait times".format(tx_hash))
+        print("\n\nUsing transaction hash {} to get wait times".format(tx_hash))
         wait_times = get_wait_times_from_transaction(tx_hash, rpc)
     else:
         wait_times = get_dry_run_wait_times(CHURNS, quick=IS_QUICK)
@@ -225,7 +245,7 @@ def main():
         sleep(current_wait_time)
 
         # Start a new churn
-        print("\nStarting churn", n)
+        print("\n\nChurn", n)
         churn(accounts, n, rpc, dry_run=IS_DRY_RUN)
 
 
@@ -237,7 +257,7 @@ def main():
     sleep(current_wait_time)
 
     # Transfer all back to main account
-    print("\nStarting last churn ({})".format(CHURNS))
+    print("\n\nLast churn ({})".format(CHURNS))
 
     churn(accounts, 0, rpc, dry_run=IS_DRY_RUN)
 
@@ -245,10 +265,10 @@ def main():
     """
     Exit when done
     """
-    print("Churns completed successfully. \n"
-          "It may take some time to unlock your balance from the last churn.")
+    print("\n\nChurns completed successfully\n"
+          "(It may take time for your balance to unlock from the last churn)\n")
 
-    print("Exiting...\n")
+    # print("Exiting...\n")
     sys.exit(0)
 
 
@@ -270,13 +290,6 @@ if __name__ == "__main__":
         IS_QUICK = True
     elif args.dry_run:
         IS_DRY_RUN = True
-
-    if IS_DRY_RUN:
-        print()
-        print("******************************************************")
-        print("WARNING: EXECUTING A DRY RUN. FUNDS WILL NOT BE MOVED!")
-        print("******************************************************")
-        print()
 
     main()
 
