@@ -235,8 +235,7 @@ def main():
 
 
     """
-    Using the churns times, to sleep that number of seconds,
-    then continue churning.
+    Using the generated churn times: sleep, churn, repeat
     NOTE: First sweep_all counts as a churn.
     """
     for n in range(2, CHURNS):
